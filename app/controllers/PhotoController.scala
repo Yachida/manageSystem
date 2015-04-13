@@ -27,15 +27,16 @@ object PhotoController extends Controller {
     )(Photo.apply)(Photo.unapply)
   )
 
-//  // ユーザ情報を受け取るためのケースクラス
-//  case class PhotoForm(ID: Long, file: String, left: Int, top: Int, right: Int, bottom: Int, imgwidth: Int, imgheight: Int, display: Boolean)
   // JSONをUserFormに変換するためのReadsを定義
   implicit val photoFormReads = Json.reads[Photo]
   // UsersRowをJSONに変換するためのWritesを定義
   implicit val photoRowWrites = Json.writes[Photo]
 
-  def showCreateForm() = Action { request =>
-    Ok("views.html.photoCreateForm(photoForm)")
+  def search(word: String) = DBAction { implicit rs =>
+    // IDの昇順にすべてのユーザ情報を取得
+    val users = PhotoDAO.search(word)
+    // ユーザの一覧をJSONで返す
+    Ok(Json.obj("users" -> users))
   }
 
   def create() = DBAction.transaction(parse.json) { implicit rs =>
@@ -50,40 +51,29 @@ object PhotoController extends Controller {
     }
   }
 
-//    DBAction { implicit rs =>
-//    photoForm.bindFromRequest.fold(
-//      errors => BadRequest("views.html.photoCreateForm(errors)"),
-//      photo => {
-//        PhotoDAO.create(photo)
-//        Redirect(routes.PhotoController.search())
-//      }
-//    )
-//  }
+  def update() = DBAction.transaction(parse.json) { implicit rs =>
+    rs.body.validate[Photo].map { form =>
+      // OKの場合はユーザを登録
+      val photo = Photo(form.ID, form.file, form.left, form.top, form.right, form.bottom, form.imgwidth, form.imgheight, form.display)
+      PhotoDAO.update(photo)
+      Ok(Json.obj("result" -> "success"))
+    }.recoverTotal { e =>
+      // NGの場合はバリデーションエラーを返す
+      BadRequest(Json.obj("result" ->"failure", "error" -> JsError.toFlatJson(e)))
+    }
+  }
 
-  def search(word: String) = DBAction { implicit rs =>
-    // IDの昇順にすべてのユーザ情報を取得
-    val users = PhotoDAO.search(word)
+  def remove(ID: Long) = DBAction.transaction { implicit rs =>
+    // ユーザを削除
+    PhotoDAO.remove(PhotoDAO.searchByID(ID))
+    Ok(Json.obj("result" -> "success"))
+  }
 
-    // ユーザの一覧をJSONで返す
-    Ok(Json.obj("users" -> users))
+  def showCreateForm() = Action { request =>
+    Ok("views.html.photoCreateForm(photoForm)")
   }
 
   def showUpdateForm(ID: Long) = DBAction { implicit rs =>
     Ok("views.html.photoUpdateForm(ID, photoForm.fill(PhotoDAO.searchByID(ID)))")
-  }
-
-  def update(ID: Long) = DBAction { implicit rs =>
-    photoForm.bindFromRequest.fold(
-      errors => BadRequest("views.html.photoUpdateForm(ID, errors)"),
-      photo => {
-        PhotoDAO.update(photo)
-        Redirect(routes.PhotoController.search())
-      }
-    )
-  }
-
-  def remove(ID: Long) = DBAction { implicit rs =>
-    PhotoDAO.remove(PhotoDAO.searchByID(ID))
-    Redirect(routes.PhotoController.search())
   }
 }

@@ -17,7 +17,7 @@ GET     /photo/search               controllers.PhotoController.search(word: Str
 
 # Update photo infomation.
 GET     /photo/:id/update           controllers.PhotoController.showUpdateForm(id: Long)
-POST    /photo/:id/update           controllers.PhotoController.update(id: Long)
+POST    /photo/update              controllers.PhotoController.update()
 
 # Remove photo infomation.
 GET     /photo/:id/remove           controllers.PhotoController.remove(id: Long)

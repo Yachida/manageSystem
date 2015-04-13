@@ -14,3 +14,9 @@ server.pid
 *.eml
 /dist/
 .cache
+.project
+.classpath
+.settings/
+play.h2.db
+play.lock.db
+play.trace.db
